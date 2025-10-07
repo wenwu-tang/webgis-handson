@@ -86,7 +86,7 @@
           url = './charlotte.kml';
           break;
         case 'gml':
-          format = new ol.format.GML({ srsName: 'EPSG:4326' });
+          format = new ol.format.WFS();
           url = './charlotte.gml';
           break;
         default:
