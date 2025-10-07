@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <gml:FeatureCollection
     xmlns:gml="http://www.opengis.net/gml"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
