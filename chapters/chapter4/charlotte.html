@@ -2,44 +2,111 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Charlotte Map Example</title>
-
-  <!-- ✅ Load prebuilt OpenLayers CSS + JS -->
+  <title>Charlotte Map with Format Toggle</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
-  <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
 
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
-    #map { width: 100%; height: 100%; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: calc(100% - 50px);
+    }
+    #controls {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
+      gap: 10px;
+    }
+    select {
+      padding: 5px 10px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
+  <div id="controls">
+    <label for="layerSelect">Select format:</label>
+    <select id="layerSelect">
+      <option value="geojson">GeoJSON</option>
+      <option value="kml">KML</option>
+      <option value="gml">GML</option>
+    </select>
+  </div>
   <div id="map"></div>
 
+  <!-- ✅ Use prebundled OpenLayers script -->
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
   <script>
-    // Create a map using the global "ol" object (available from ol.js)
+    // --- Create base OpenStreetMap layer ---
+    const baseLayer = new ol.layer.Tile({
+      source: new ol.source.OSM()
+    });
+
+    // --- Initialize vector layer (empty for now) ---
+    let vectorLayer = new ol.layer.Vector({
+      source: new ol.source.Vector(),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8,
+          fill: new ol.style.Fill({ color: 'red' }),
+          stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+        })
+      })
+    });
+
+    // --- Create map ---
     const map = new ol.Map({
       target: 'map',
-      layers: [
-        new ol.layer.Tile({ source: new ol.source.OSM() }),
-        new ol.layer.Vector({
-          source: new ol.source.Vector({
-            url: 'https://wenwu-tang.github.io/webgis-handson/chapters/chapter4/charlotte.geojson', // or .kml / .gml
-            format: new ol.format.GeoJSON() // or new ol.format.KML(), new ol.format.GML()
-          }),
-          style: new ol.style.Style({
-            image: new ol.style.Circle({
-              radius: 8,
-              fill: new ol.style.Fill({color: 'red'}),
-              stroke: new ol.style.Stroke({color: 'white', width: 2})
-            })
-          })
-        })
-      ],
+      layers: [baseLayer, vectorLayer],
       view: new ol.View({
         center: ol.proj.fromLonLat([-80.8431, 35.2271]),
         zoom: 11
       })
+    });
+
+    // --- Helper function to load vector data by format ---
+    function loadLayer(formatType) {
+      let format, url;
+
+      switch (formatType) {
+        case 'geojson':
+          format = new ol.format.GeoJSON();
+          url = './charlotte.geojson';
+          break;
+        case 'kml':
+          format = new ol.format.KML();
+          url = './charlotte.kml';
+          break;
+        case 'gml':
+          format = new ol.format.GML({ srsName: 'EPSG:4326' });
+          url = './charlotte.gml';
+          break;
+        default:
+          return;
+      }
+
+      const newSource = new ol.source.Vector({
+        url: url,
+        format: format
+      });
+
+      vectorLayer.setSource(newSource);
+    }
+
+    // --- Load default (GeoJSON) on startup ---
+    loadLayer('geojson');
+
+    // --- Listen for dropdown changes ---
+    document.getElementById('layerSelect').addEventListener('change', (e) => {
+      loadLayer(e.target.value);
     });
   </script>
 </body>
