@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Charlotte, NC</name>
+    <Placemark>
+      <name>Charlotte, NC</name>
+      <Point>
+        <coordinates>-80.8431,35.2271,0</coordinates>
+      </Point>
+    </Placemark>
+  </Document>
+</kml>
