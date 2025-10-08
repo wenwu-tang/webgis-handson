@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Charlotte, NC - GML, KML, GeoJSON Example (OpenLayers)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- OpenLayers CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    #map { width: 100%; height: 100%; }
+    .ol-control button { background-color: white; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <!-- OpenLayers JS -->
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/ol.js"></script>
+  <script>
+    // --- Define vector layers for each format ---
+
+    // 1. GeoJSON
+    const geojsonLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
+        url: 'charlotte.geojson',
+        format: new ol.format.GeoJSON()
+      }),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8,
+          fill: new ol.style.Fill({ color: 'rgba(0, 123, 255, 0.6)' }),
+          stroke: new ol.style.Stroke({ color: '#004080', width: 2 })
+        })
+      })
+    });
+
+    // 2. KML
+    const kmlLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
+        url: 'charlotte.kml',
+        format: new ol.format.KML()
+      }),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8,
+          fill: new ol.style.Fill({ color: 'rgba(0, 200, 0, 0.6)' }),
+          stroke: new ol.style.Stroke({ color: '#006600', width: 2 })
+        })
+      })
+    });
+
+    // 3. GML
+    const gmlLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
+        url: 'charlotte.gml',
+        format: new ol.format.GML()
+      }),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8,
+          fill: new ol.style.Fill({ color: 'rgba(255, 0, 0, 0.6)' }),
+          stroke: new ol.style.Stroke({ color: '#800000', width: 2 })
+        })
+      })
+    });
+
+    // --- Base map ---
+    const baseLayer = new ol.layer.Tile({
+      source: new ol.source.OSM()
+    });
+
+    // --- Map setup ---
+    const map = new ol.Map({
+      target: 'map',
+      layers: [baseLayer, geojsonLayer, kmlLayer, gmlLayer],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-80.8431, 35.2271]), // Charlotte
+        zoom: 11
+      })
+    });
+
+    // --- Optional: layer switcher control ---
+    const layerSelect = document.createElement('select');
+    layerSelect.innerHTML = `
+      <option value="all" selected>Show All</option>
+      <option value="geojson">GeoJSON Only</option>
+      <option value="kml">KML Only</option>
+      <option value="gml">GML Only</option>
+    `;
+    layerSelect.style.position = 'absolute';
+    layerSelect.style.top = '10px';
+    layerSelect.style.left = '10px';
+    layerSelect.style.zIndex = 1000;
+    layerSelect.style.padding = '4px';
+    document.body.appendChild(layerSelect);
+
+    layerSelect.addEventListener('change', () => {
+      const val = layerSelect.value;
+      geojsonLayer.setVisible(val === 'all' || val === 'geojson');
+      kmlLayer.setVisible(val === 'all' || val === 'kml');
+      gmlLayer.setVisible(val === 'all' || val === 'gml');
+    });
+  </script>
+</body>
+</html>
