@@ -4,13 +4,19 @@
   <meta charset="utf-8" />
   <title>Charlotte Map (GeoJSON, KML, GML)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol/ol.css">
+
+  <!-- Use the bundled OpenLayers build to avoid bare-specifier errors -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol/dist/ol.css">
+  <script src="https://cdn.jsdelivr.net/npm/ol/dist/ol.js"></script>
+
   <style>
+    /* These are critical, otherwise the map won't be visible */
     html, body { height: 100%; margin: 0; }
     #map { width: 100%; height: 100%; }
+
     .toolbar {
       position: absolute; z-index: 1000; top: 10px; left: 10px;
-      background: rgba(255,255,255,.9); padding: 8px 10px; border-radius: 8px;
+      background: rgba(255,255,255,.92); padding: 8px 10px; border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,.15); font: 14px/1.2 system-ui, sans-serif;
     }
     .toolbar label { margin-right: 8px; }
@@ -18,6 +24,7 @@
 </head>
 <body>
   <div id="map"></div>
+
   <div class="toolbar">
     <label><strong>Toggle layers:</strong></label>
     <label><input type="checkbox" id="chkGeoJSON" checked> GeoJSON</label>
@@ -25,84 +32,72 @@
     <label><input type="checkbox" id="chkGML" checked> GML</label>
   </div>
 
-  <script type="module">
-    import Map from 'https://cdn.jsdelivr.net/npm/ol/Map.js';
-    import View from 'https://cdn.jsdelivr.net/npm/ol/View.js';
-    import TileLayer from 'https://cdn.jsdelivr.net/npm/ol/layer/Tile.js';
-    import OSM from 'https://cdn.jsdelivr.net/npm/ol/source/OSM.js';
-    import VectorLayer from 'https://cdn.jsdelivr.net/npm/ol/layer/Vector.js';
-    import VectorSource from 'https://cdn.jsdelivr.net/npm/ol/source/Vector.js';
-    import KML from 'https://cdn.jsdelivr.net/npm/ol/format/KML.js';
-    import GeoJSON from 'https://cdn.jsdelivr.net/npm/ol/format/GeoJSON.js';
-    import GML3 from 'https://cdn.jsdelivr.net/npm/ol/format/GML3.js';
-    import GML32 from 'https://cdn.jsdelivr.net/npm/ol/format/GML32.js';
-    import Feature from 'https://cdn.jsdelivr.net/npm/ol/Feature.js';
-    import Point from 'https://cdn.jsdelivr.net/npm/ol/geom/Point.js';
-    import {fromLonLat} from 'https://cdn.jsdelivr.net/npm/ol/proj.js';
-
+  <script>
     // Base map
-    const map = new Map({
+    const map = new ol.Map({
       target: 'map',
-      layers: [ new TileLayer({ source: new OSM() }) ],
-      view: new View({
-        center: fromLonLat([-80.8431, 35.2271]), // Charlotte, NC
+      layers: [
+        new ol.layer.Tile({ source: new ol.source.OSM() })
+      ],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-80.8431, 35.2271]), // Charlotte, NC
         zoom: 8
       })
     });
 
     // --- GeoJSON layer ---
-    const geojsonLayer = new VectorLayer({
-      source: new VectorSource({
+    const geojsonLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
         url: 'charlotte.geojson',
-        format: new GeoJSON()
+        format: new ol.format.GeoJSON()
       })
     });
     map.addLayer(geojsonLayer);
 
     // --- KML layer ---
-    const kmlLayer = new VectorLayer({
-      source: new VectorSource({
+    const kmlLayer = new ol.layer.Vector({
+      source: new ol.source.Vector({
         url: 'charlotte.kml',
-        format: new KML()
+        format: new ol.format.KML()
       })
     });
     map.addLayer(kmlLayer);
 
-    // --- GML layer (explicit parsing with version + projections) ---
-    const gmlSource = new VectorSource();
-    const gmlLayer = new VectorLayer({ source: gmlSource });
+    // --- GML layer (explicit parsing for version + projection) ---
+    const gmlSource = new ol.source.Vector();
+    const gmlLayer = new ol.layer.Vector({ source: gmlSource });
     map.addLayer(gmlLayer);
 
     fetch('charlotte.gml')
       .then(r => r.text())
       .then(xmlText => {
-        // Choose parser by namespace; 3.2 uses .../gml/3.2, 3.1.1 uses .../gml
+        // Pick GML parser by namespace
         const isGML32 = xmlText.includes('http://www.opengis.net/gml/3.2');
-        const format = isGML32 ? new GML32() : new GML3();
+        const format = isGML32 ? new ol.format.GML32() : new ol.format.GML3();
 
         // 1) Try reading as features (Feature/FeatureCollection)
         let features = format.readFeatures(xmlText, {
-          dataProjection: 'EPSG:4326',     // CRS inside the GML
-          featureProjection: 'EPSG:3857'   // map CRS (Web Mercator)
+          dataProjection: 'EPSG:4326',     // CRS in the GML file
+          featureProjection: 'EPSG:3857'   // map/view CRS
         });
 
-        // 2) Fallback: if it's a bare geometry (e.g., just <gml:Point>)
+        // 2) Fallback: bare <gml:Point>
         if (!features.length) {
           try {
             const geom = format.readGeometry(xmlText, {
               dataProjection: 'EPSG:4326',
               featureProjection: 'EPSG:3857'
             });
-            if (geom) features = [new Feature({ geometry: geom })];
-          } catch {}
+            if (geom) features = [new ol.Feature({ geometry: geom })];
+          } catch (_) {}
         }
 
-        // 3) Last-resort fallback: parse <gml:pos> lon lat
+        // 3) Last resort: parse <gml:pos> lon lat
         if (!features.length) {
           const m = xmlText.match(/<gml:pos[^>]*>([-+0-9.eE]+)\s+([-+0-9.eE]+)<\/gml:pos>/);
           if (m) {
             const lon = parseFloat(m[1]), lat = parseFloat(m[2]);
-            features = [new Feature(new Point(fromLonLat([lon, lat])))];
+            features = [new ol.Feature(new ol.geom.Point(ol.proj.fromLonLat([lon, lat])))];
           }
         }
 
@@ -110,16 +105,15 @@
         if (features.length) {
           map.getView().fit(gmlSource.getExtent(), { padding: [40,40,40,40], maxZoom: 12 });
         } else {
-          console.warn('No features could be read from GML. Check GML version/CRS/structure.');
+          console.warn('No features could be read from GML.');
         }
       })
       .catch(err => console.error('GML load error:', err));
 
-    // Simple checkboxes to toggle visibility
-    const byId = id => document.getElementById(id);
-    byId('chkGeoJSON').addEventListener('change', e => geojsonLayer.setVisible(e.target.checked));
-    byId('chkKML').addEventListener('change', e => kmlLayer.setVisible(e.target.checked));
-    byId('chkGML').addEventListener('change', e => gmlLayer.setVisible(e.target.checked));
+    // Toggle checkboxes
+    document.getElementById('chkGeoJSON').addEventListener('change', e => geojsonLayer.setVisible(e.target.checked));
+    document.getElementById('chkKML').addEventListener('change', e => kmlLayer.setVisible(e.target.checked));
+    document.getElementById('chkGML').addEventListener('change', e => gmlLayer.setVisible(e.target.checked));
   </script>
 </body>
 </html>
