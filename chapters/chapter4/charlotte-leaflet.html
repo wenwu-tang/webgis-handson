@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Charlotte, NC — GML, KML, and GeoJSON with Leaflet</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: system-ui, sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: calc(100% - 50px);
+    }
+    #controls {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      padding: 6px 12px;
+      background: #f8f8f8;
+      border-bottom: 1px solid #ddd;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="layerSelect"><strong>Select Layer:</strong></label>
+    <select id="layerSelect">
+      <option value="geojson">GeoJSON</option>
+      <option value="kml">KML</option>
+      <option value="gml">GML</option>
+    </select>
+    <span id="status">Loading <code>charlotte.geojson</code>...</span>
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Omnivore plugin for reading KML, GPX, GML, GeoJSON, etc. -->
+  <script src="https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.3.4/leaflet-omnivore.min.js"></script>
+
+  <script>
+    // --- Initialize map ---
+    const map = L.map('map').setView([35.2271, -80.8431], 11); // Charlotte center
+
+    // --- Base map layer ---
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const statusEl = document.getElementById('status');
+    const selector = document.getElementById('layerSelect');
+
+    let currentLayer = null;
+
+    // --- Helper to load selected file ---
+    function loadLayer(type) {
+      if (currentLayer) {
+        map.removeLayer(currentLayer);
+        currentLayer = null;
+      }
+
+      let file = '';
+      switch (type) {
+        case 'geojson': file = 'charlotte.geojson'; break;
+        case 'kml': file = 'charlotte.kml'; break;
+        case 'gml': file = 'charlotte.gml'; break;
+        default: file = 'charlotte.geojson';
+      }
+
+      statusEl.textContent = `Loading ${file}...`;
+
+      // Use leaflet-omnivore to load the file
+      const layer = omnivore[type](file)
+        .on('ready', function () {
+          map.fitBounds(layer.getBounds());
+          statusEl.textContent = `${file} loaded successfully.`;
+        })
+        .on('error', function (e) {
+          statusEl.textContent = `Error loading ${file}. Check console for details.`;
+          console.error(e);
+        });
+
+      layer.addTo(map);
+      currentLayer = layer;
+    }
+
+    // --- Initial load ---
+    loadLayer('geojson');
+
+    // --- Dropdown event listener ---
+    selector.addEventListener('change', (e) => {
+      loadLayer(e.target.value);
+    });
+  </script>
+</body>
+</html>
