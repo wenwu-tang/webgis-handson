@@ -3,26 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <title>Charlotte Map (GeoJSON, KML, GML)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol/ol.css">
   <style>
-    html, body {
-      margin: 0;
-      height: 100%;
+    html, body { height: 100%; margin: 0; }
+    #map { width: 100%; height: 100%; }
+    .toolbar {
+      position: absolute; z-index: 1000; top: 10px; left: 10px;
+      background: rgba(255,255,255,.9); padding: 8px 10px; border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15); font: 14px/1.2 system-ui, sans-serif;
     }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-    .ol-popup {
-      background: white;
-      border-radius: 8px;
-      padding: 5px 10px;
-      border: 1px solid #ccc;
-    }
+    .toolbar label { margin-right: 8px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
+  <div class="toolbar">
+    <label><strong>Toggle layers:</strong></label>
+    <label><input type="checkbox" id="chkGeoJSON" checked> GeoJSON</label>
+    <label><input type="checkbox" id="chkKML" checked> KML</label>
+    <label><input type="checkbox" id="chkGML" checked> GML</label>
+  </div>
 
   <script type="module">
     import Map from 'https://cdn.jsdelivr.net/npm/ol/Map.js';
@@ -39,56 +40,53 @@
     import Point from 'https://cdn.jsdelivr.net/npm/ol/geom/Point.js';
     import {fromLonLat} from 'https://cdn.jsdelivr.net/npm/ol/proj.js';
 
-    // --- Base map ---
+    // Base map
     const map = new Map({
       target: 'map',
-      layers: [
-        new TileLayer({ source: new OSM() })
-      ],
+      layers: [ new TileLayer({ source: new OSM() }) ],
       view: new View({
         center: fromLonLat([-80.8431, 35.2271]), // Charlotte, NC
         zoom: 8
       })
     });
 
-    // --- KML Layer ---
-    const kmlLayer = new VectorLayer({
-      source: new VectorSource({
-        url: 'charlotte.kml',
-        format: new KML()
-      }),
-      style: null
-    });
-    map.addLayer(kmlLayer);
-
-    // --- GeoJSON Layer ---
+    // --- GeoJSON layer ---
     const geojsonLayer = new VectorLayer({
       source: new VectorSource({
         url: 'charlotte.geojson',
         format: new GeoJSON()
-      }),
-      style: null
+      })
     });
     map.addLayer(geojsonLayer);
 
-    // --- GML Layer ---
+    // --- KML layer ---
+    const kmlLayer = new VectorLayer({
+      source: new VectorSource({
+        url: 'charlotte.kml',
+        format: new KML()
+      })
+    });
+    map.addLayer(kmlLayer);
+
+    // --- GML layer (explicit parsing with version + projections) ---
     const gmlSource = new VectorSource();
     const gmlLayer = new VectorLayer({ source: gmlSource });
     map.addLayer(gmlLayer);
 
-    // Load GML explicitly to control version & projection
     fetch('charlotte.gml')
       .then(r => r.text())
       .then(xmlText => {
+        // Choose parser by namespace; 3.2 uses .../gml/3.2, 3.1.1 uses .../gml
         const isGML32 = xmlText.includes('http://www.opengis.net/gml/3.2');
         const format = isGML32 ? new GML32() : new GML3();
 
+        // 1) Try reading as features (Feature/FeatureCollection)
         let features = format.readFeatures(xmlText, {
-          dataProjection: 'EPSG:4326',     // coordinates in GML file
-          featureProjection: 'EPSG:3857'   // projection of the map (Web Mercator)
+          dataProjection: 'EPSG:4326',     // CRS inside the GML
+          featureProjection: 'EPSG:3857'   // map CRS (Web Mercator)
         });
 
-        // Fallback: handle bare <gml:Point>
+        // 2) Fallback: if it's a bare geometry (e.g., just <gml:Point>)
         if (!features.length) {
           try {
             const geom = format.readGeometry(xmlText, {
@@ -96,21 +94,32 @@
               featureProjection: 'EPSG:3857'
             });
             if (geom) features = [new Feature({ geometry: geom })];
-          } catch (e) {
-            const match = xmlText.match(/<gml:pos[^>]*>([-+0-9\.]+)\s+([-+0-9\.]+)<\/gml:pos>/);
-            if (match) {
-              const [lon, lat] = [parseFloat(match[1]), parseFloat(match[2])];
-              features = [new Feature(new Point(fromLonLat([lon, lat])))];
-            }
+          } catch {}
+        }
+
+        // 3) Last-resort fallback: parse <gml:pos> lon lat
+        if (!features.length) {
+          const m = xmlText.match(/<gml:pos[^>]*>([-+0-9.eE]+)\s+([-+0-9.eE]+)<\/gml:pos>/);
+          if (m) {
+            const lon = parseFloat(m[1]), lat = parseFloat(m[2]);
+            features = [new Feature(new Point(fromLonLat([lon, lat])))];
           }
         }
 
         gmlSource.addFeatures(features);
         if (features.length) {
-          map.getView().fit(gmlSource.getExtent(), { padding: [40, 40, 40, 40], maxZoom: 12 });
+          map.getView().fit(gmlSource.getExtent(), { padding: [40,40,40,40], maxZoom: 12 });
+        } else {
+          console.warn('No features could be read from GML. Check GML version/CRS/structure.');
         }
       })
       .catch(err => console.error('GML load error:', err));
+
+    // Simple checkboxes to toggle visibility
+    const byId = id => document.getElementById(id);
+    byId('chkGeoJSON').addEventListener('change', e => geojsonLayer.setVisible(e.target.checked));
+    byId('chkKML').addEventListener('change', e => kmlLayer.setVisible(e.target.checked));
+    byId('chkGML').addEventListener('change', e => gmlLayer.setVisible(e.target.checked));
   </script>
 </body>
 </html>
