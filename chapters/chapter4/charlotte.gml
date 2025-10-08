@@ -8,7 +8,7 @@
     <ex:City fid="charlotte">
       <ex:the_geom>
         <gml:Point srsName="http://www.opengis.net/def/crs/OGC/1.3/CRS84">
-          <gml:coordinates>-80.8431, 35.2271</gml:coordinates>
+          <gml:coordinates>35.2271，-80.8431</gml:coordinates>
         </gml:Point>
       </ex:the_geom>
       <ex:name>Charlotte</ex:name>
