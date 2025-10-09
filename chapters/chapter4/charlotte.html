@@ -73,7 +73,7 @@
     });
 
     // --- Helper function to load vector data by format ---
-    function loadLayer(formatType) {
+    async function loadLayer(formatType) {
       let format, url;
 
       switch (formatType) {
@@ -92,13 +92,36 @@
         default:
           return;
       }
-
+/*
       const newSource = new ol.source.Vector({
         url: url,
         format: format
       });
 
       vectorLayer.setSource(newSource);
+*/
+      // For GeoJSON and KML we can use the built-in URL loader directly
+      if (formatType === 'geojson' || formatType === 'kml') {
+        vectorLayer.setSource(new ol.source.Vector({ url, format }));
+        return;
+      }
+
+      // For GML, read with explicit projections to avoid axis-order/projection issues
+      const text = await fetch(url).then(r => r.text());
+      const feats = format.readFeatures(text, {
+        dataProjection: 'CRS:84',                              // GML2 <coordinates> lon,lat
+        featureProjection: map.getView().getProjection()       // usually EPSG:3857
+      });
+
+      const src = new ol.source.Vector({ features: feats });
+      vectorLayer.setSource(src);
+
+      // Fit the view so it's obvious when the point loads
+      if (feats.length) {
+        map.getView().fit(src.getExtent(), { maxZoom: 14, duration: 300 });
+      }	  
+	  
+	  
     }
 
     // --- Load default (GeoJSON) on startup ---
