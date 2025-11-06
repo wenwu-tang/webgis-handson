@@ -1,0 +1,19 @@
+Title: 100-foot Resampled Digital Elevation Model (DEM) for Mecklenburg, North Carolina 2016
+
+Abstract: The data was resampled with 100 feet spatial resolution based on the original DEM product from NC OneMap accessed on 11/5/2025. Check more information about the original DEM product in the Original Abstract section and https://www.nconemap.gov/.
+
+Purpose: The data is used for demonstration purpose for Web GIS education. 
+
+Spatial Information:
+Coordinate System: NAD 1983 (2011) StatePlane North Carolina FIPS 3200 (US Feet)
+Vertical Datum: NAVD88 (GEOID12B)
+Units: US Survey Feet
+Top: 653,830.000000 ftUS
+Bottom: 453,790.000000 ftUS
+Left: 1,374,909.997383 ftUS
+Right: 1,545,099.997383 ftUS
+
+
+Abstract of the original DEM product: Three foot countywide DEM mosaics were created by using raster DEM tiles (TIFF format) provided by NC Emergency Management. The Digital Elevation Models (DEM) tiles were generated at a 3.125 foot resolution as rasters, using the ground (Class 2) points and the hydro flattened breaklines as inputs from the project. The DEMs were produced specific to the 2016 Phase Four project area consisting of 20 North Carolina counties. LiDAR data for the project and the validation site was collected by a single aerial vendor on ESP team between February 27, 2016 and April 17, 2016 and between December 9, 2016 and February 21 of 2017 using Geiger-mode Avalanche Photodiode (GmAPD) sensors. The aerial vendor on the ESP team was Harris Corporation (Harris).Two GmAPD (Geiger-mode) sensors (serial numbers 002 and 003) were used for the data collection of LiDAR data at a 0.35 meter nominal post spacing (NPS). The following counties or portions of counties were collected in the February through April, 2016 mobilization: Alleghany, Stokes, Surry, Cleveland, Gaston, Mecklenburg, Cabarrus, Stanly, Union, and Anson. The following counties or portions of counties were collected in the December, 2016 through February, 2017 mobilization: Cleveland, Gaston, Mecklenburg, Cabarrus, Stanly, Wilkes, Yadkin, Forsyth, Alexander, Catawba, Iredell, Davie, Rowan, and Davidson. All data was collected during leaf-off conditions. Ground survey support for the project included the establishment of GPS base stations and the collection of control points used for calibration. All data was delivered in the North Carolina State Plane Coordinate System, with a horizontal datum of NAD83 (2011), vertical datum of NAVD88 (Geoid 12B), in US Survey Feet. Data was delivered tiled to a 2,500 foot by 2,500 foot tiling scheme unless otherwise specified in this product description. All LiDAR was delivered in LASer (LAS) version 1.4 standard format. Products for this project derived from the source LiDAR included: intensity images in GeoTIFF format, hydro-flattening breaklines in ESRI File Geodatabase format, Digital Elevation Models (DEMs) in TIF format, ESRI Terrain Datasets (by county) in ESRI File Geodatabase format, product and project-level metadata, and project reports to include the Report of Survey, Post-Acquisition Report, and Project Report. All LiDAR and derivative products for this project met the specifications stipulated in Delivery Order 22, the NC LiDAR Standard, and the USGS minimum standards for QL1 LiDAR data. This project was a joint effort between NC Emergency Management, NC Geodetic Survey, and the NCDOT. The following people served as the main representatives for each stakeholder: NC Emergency Management- Hope Morgan (primary contact) and John Dorman; NC Geodetic Survey- Gary Thompson and Watson Ross; NCDOT- Keith Johnston and Marc Swartz, and the United States Geological Survey (USGS.
+
+Citation of the original DEM product: NC OneMap (2019). North Carolina Department of Information Technology, Government Data Analytics Center, Center for Geographic Information and Analysis. Available at www.nconemap.gov.
