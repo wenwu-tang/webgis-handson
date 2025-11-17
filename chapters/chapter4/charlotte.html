@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Examples of Web-based Geospatial Data Standards</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@latest/ol.css">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: calc(100% - 50px);
+    }
+    #controls {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f0f0;
+      border-bottom: 1px solid #ccc;
+      gap: 10px;
+    }
+    select {
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="layerSelect">Select geospatial data formats:</label>
+    <select id="layerSelect">
+      <option value="geojson">GeoJSON</option>
+      <option value="kml">KML</option>
+      <option value="gml">GML</option>
+      <option value="geotiff">GeoTIFF</option>
+    </select>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/elm-pep@1.0.6/dist/elm-pep.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ol@latest/dist/ol.js"></script>
+
+  <script>
+    // --- Base OSM layer ---
+    const baseLayer = new ol.layer.Tile({
+      source: new ol.source.OSM()
+    });
+
+    // --- Vector layer placeholder ---
+    let vectorLayer = new ol.layer.Vector({
+      source: new ol.source.Vector(),
+      style: new ol.style.Style({
+        image: new ol.style.Circle({
+          radius: 8,
+          fill: new ol.style.Fill({ color: 'red' }),
+          stroke: new ol.style.Stroke({ color: 'white', width: 2 })
+        })
+      })
+    });
+
+    // --- GeoTIFF layer placeholder ---
+    let demLayer = null;
+
+    // --- Map setup ---
+    const map = new ol.Map({
+      target: 'map',
+      layers: [baseLayer, vectorLayer],
+      view: new ol.View({
+        center: ol.proj.fromLonLat([-80.8431, 35.2271]),
+        zoom: 10
+      })
+    });
+
+    // --- Helper function: load vector or raster layer ---
+    async function loadLayer(formatType) {
+      // Remove previous GeoTIFF if it exists
+      if (demLayer) {
+        map.removeLayer(demLayer);
+        demLayer = null;
+      }
+
+      let format, url;
+
+      switch (formatType) {
+        case 'geojson':
+          format = new ol.format.GeoJSON();
+          url = './charlotte.geojson';
+          vectorLayer.setSource(new ol.source.Vector({ url, format }));
+          break;
+
+        case 'kml':
+          format = new ol.format.KML();
+          url = './charlotte.kml';
+          vectorLayer.setSource(new ol.source.Vector({ url, format }));
+          break;
+
+        case 'gml':
+          format = new ol.format.GML2();
+          url = './charlotte.gml';
+          const text = await fetch(url).then(r => r.text());
+          const feats = format.readFeatures(text, {
+            dataProjection: 'CRS:84',
+            featureProjection: map.getView().getProjection()
+          });
+          const src = new ol.source.Vector({ features: feats });
+          vectorLayer.setSource(src);
+
+          break;
+
+        case 'geotiff':
+          // Load GeoTIFF layer
+          const demSource = new ol.source.GeoTIFF({
+            sources: [{ url: './mecklenburgDEM100_WGS84_COG.tif' }],
+          });
+          demLayer = new ol.layer.WebGLTile({
+            source: demSource,
+            opacity: 0.8, // match demo transparency
+          });
+          map.addLayer(demLayer);
+
+
+
+          // Hide vector layer when raster selected
+          vectorLayer.setSource(new ol.source.Vector());
+          break;
+
+        default:
+          return;
+      }
+    }
+
+    // --- Load default (GeoJSON) ---
+    loadLayer('geojson');
+
+    // --- Listen for dropdown selection ---
+    document.getElementById('layerSelect').addEventListener('change', (e) => {
+      loadLayer(e.target.value);
+    });
+  </script>
+</body>
+</html>
