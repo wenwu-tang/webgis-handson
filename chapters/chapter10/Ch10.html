@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chapter 10: Server-Side GIS: Raster Data Services</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style> 
+    html,body,
+    #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+<script>     
+    const map = L.map("map").setView([33.158, -79.796], 14);
+    const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+    const baseLayers = { "OpenStreetMap": osm };
+	
+	const WMS_URL = "http://127.0.0.1:8080/geoserver/santee_raster/wms";
+    const WORKSPACE = "santee_raster";
+    const NAME = "SanteeRasters";
+    const WMS_LAYER_NAME = `${WORKSPACE}:${NAME}`;
+    map.createPane("pane-local");
+    map.getPane("pane-local").style.zIndex = 500;
+
+    const localWmsLayer = L.tileLayer.wms(WMS_URL, {
+      layers: WMS_LAYER_NAME,
+      format: "image/png",
+      transparent: true,
+      version: "1.1.1",
+      pane: "pane-local"
+    });  
+    map.createPane("pane-dem");
+    map.createPane("pane-usgs");
+    map.getPane("pane-dem").style.zIndex = 300;
+    map.getPane("pane-usgs").style.zIndex = 400;
+
+    const MRLC_LABEL = "USGS MRLC (NLCD)";
+    const usgsMrlcWms = L.tileLayer.wms(
+      "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+      {
+        layers: "Land-Cover-Native_conus_year_data",
+        format: "image/png",
+        transparent: true,
+        version: "1.1.1",
+        pane: "pane-usgs"
+      }
+    ); 
+    const DEM_LABEL = "DEM: USGS 3DEP Hillshade"
+    const demWms = L.tileLayer.wms(
+      "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer",
+      {
+        layers: "3DEPElevation:Hillshade Gray",
+        format: "image/png",
+        transparent: true,
+        version: "1.3.0",
+        pane: "pane-dem"
+      }
+    );	
+    const overlays = {
+      [WMS_LAYER_NAME]: localWmsLayer,
+      [MRLC_LABEL]: usgsMrlcWms,
+      [DEM_LABEL]: demWms
+    };
+    L.control.layers(baseLayers, overlays, { collapsed: false }).addTo(map);
+	demWms.addTo(map);
+    usgsMrlcWms.addTo(map);
+    localWmsLayer.addTo(map);  	 
+  </script>
+</body>
+</html>
