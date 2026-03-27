@@ -1,0 +1,198 @@
+<html> 
+<head> 
+ <title>Chapter 11: Web-based Query</title>
+	<script src="https://cdn.jsdelivr.net/npm/ol@v10.3.1/dist/ol.js"></script>    
+	<script src="https://rawgit.com/walkermatt/ol-layerswitcher/master/dist/ol-layerswitcher.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.1/proj4.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.3.1/ol.css">
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/src/ol-layerswitcher.css"/>
+    <link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/examples/layerswitcher.css" />
+</head> 
+
+<body> 
+<h3>Chapter 11: Web-based Query</h3> 
+<h4>Author: YourNameHere</h4> 
+
+<div id="controls">
+	<h4> Non-spatial Query </h4>
+    <label for="cqlInput1">CQL Query for streams:</label>
+    <input type="text" id="cqlInput1" value="LENGTH > 200">
+    <button id="applyCQL1">Apply CQL</button>
+</div>
+
+<div id="controls2">
+	<h4> Spatial Query </h4>
+    <button id="rectangle-query">Query using Rectangle</button>
+</div>
+
+
+<div id="map" class="map", style = "width:100%; height: 100%"></div> 
+
+<script type="text/javascript">
+		// Register the EPSG:26917 projection with proj4
+        proj4.defs('EPSG:26917', '+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs');
+        ol.proj.proj4.register(proj4);
+		
+		var OSM = new ol.layer.Tile({ 
+			title: 'OSM', 
+			type: 'base', 
+			visible: true, 
+			source: new ol.source.OSM() 
+		}); 
+
+		var wms1 = new ol.layer.Tile({ 
+			title: 'Santee Experiment Forest Boundary', 
+			visible: true, 
+			projection: 'EPSG:4326',
+			source: new ol.source.TileWMS({ 
+			url: 'http://jade.uncc.edu:8080/geoserver/wms', 
+			params: {'LAYERS': 'wenwu:sef_boundary_100ft', 'TILED': true}, 
+			serverType: 'geoserver', 
+			transition: 0 
+			}) 
+		}); 
+		var group = new ol.layer.Group({ 
+			'title': 'Base maps', 
+			layers: [OSM] 
+		}); 
+		 
+		var map = new ol.Map({ 
+			target: 'map', 
+			layers: [group,wms1], 
+			view: new ol.View({ 
+				projection: 'EPSG:4326',
+				center:  [-79.795,33.152],
+				zoom: 14
+			}) 
+		});
+		 
+		var layerSwitcher = new ol.control.LayerSwitcher({ 
+			tipLabel: 'Legend' // Optional label for button 
+		}); 
+		  
+		map.addControl(layerSwitcher); 
+ 		
+		// Define the vector source with dynamic CQL support
+        const vectorSource = new ol.source.Vector({
+            format: new ol.format.GeoJSON(),
+            loader: () => {
+                const cqlFilter = encodeURIComponent(document.getElementById('cqlInput1').value);
+				console.log('Applying CQL Filter:', cqlFilter);
+                const url = `http://jade.uncc.edu:8080/geoserver/wenwu/ows?service=WFS
+					&version=1.1.0
+					&request=GetFeature
+					&typename=wenwu:sef_streams
+					&outputFormat=application/json
+					&srsname=EPSG:26917
+					&CQL_FILTER=${cqlFilter}`;
+
+				console.log("Fetching WFS URL:", url); // Add this line to check the URL
+                fetch(url,{
+					method: 'GET',
+					mode: 'cors',
+				})
+				.then(response => {
+					if (!response.ok) throw new Error('Network response was not ok');
+					return response.json();
+				})
+				.then(data => {
+					const features = new ol.format.GeoJSON().readFeatures(data, {
+						dataProjection: 'EPSG:26917', // Data's original projection
+						featureProjection: 'EPSG:4326' // Map's projection
+					});
+					vectorSource.clear();
+					vectorSource.addFeatures(features);
+				})
+				.catch(error => console.error('Error loading data:', error));
+            }
+        });
+
+        // Define the vector layer
+        const vectorLayer = new ol.layer.Vector({
+			title: 'Streams',
+            source: vectorSource,
+            style: new ol.style.Style({
+                stroke: new ol.style.Stroke({
+                    color: '#00FF00',
+                    width: 2
+                })
+            })
+        });
+        map.addLayer(vectorLayer);
+
+        // Apply the CQL filter on button click event
+        document.getElementById('applyCQL1').addEventListener('click', () => {
+            vectorSource.clear(); // Clear previous features
+        	vectorSource.refresh();
+        });
+   
+		
+		//spatial Query
+		// Drawing interaction for polygons
+		//const draw = new ol.interaction.Draw({
+		//	source: new ol.source.Vector(),
+		//	type: 'Polygon', // Change to 'Circle' for rectangles
+		//});
+
+
+		
+		// Drawing interaction for rectangles
+		const draw = new ol.interaction.Draw({
+			source: new ol.source.Vector(),
+			type: 'Circle', // Change to 'Circle' for rectangles
+			geometryFunction: ol.interaction.Draw.createBox(),
+		});
+
+		// Add interaction for spatial query only when the button is clicked
+		const startDrawButton = document.getElementById('rectangle-query');
+			startDrawButton.addEventListener('click', () => {
+			map.addInteraction(draw);
+		});
+		
+		// Store reference to the vector source for queried features
+		const queriedSource = new ol.source.Vector();
+		const queriedLayer = new ol.layer.Vector({
+			source: queriedSource,
+		});
+		map.addLayer(queriedLayer);
+		
+		// Handle drawing completion
+		draw.on('drawend', function (event) {
+			map.removeInteraction(draw); // Remove interaction after drawing is complete
+			const geometry = event.feature.getGeometry();
+			const format = new ol.format.WKT();
+			const wkt = format.writeGeometry(geometry, {
+				dataProjection: 'EPSG:26917',
+				featureProjection: map.getView().getProjection(),
+			});
+
+			// GeoServer query
+			const filter = encodeURIComponent(`INTERSECTS(the_geom, ${wkt})`);
+			const url = `http://jade.uncc.edu:8080/geoserver/ows?
+					service=WFS&
+					version=1.1.0&
+					request=GetFeature&
+					typeName=wenwu:sef_streams&
+					outputFormat=application/json&
+					srsname=EPSG:26917&
+					CQL_FILTER=${filter}`;
+			// Clear previous features from the queried source
+			queriedSource.clear();
+
+			// Fetch data from GeoServer
+			fetch(url)
+				.then(response => response.json())
+				.then(data => {
+				  // Add queried features to the vector source
+				  const features = new ol.format.GeoJSON().readFeatures(data, {
+					dataProjection: 'EPSG:26917',
+					featureProjection: map.getView().getProjection(),
+				  });
+				  queriedSource.addFeatures(features);
+				})
+				.catch(error => console.error('Error fetching data:', error));
+		});
+ </script> 
+ </body> 
+</html>
+
