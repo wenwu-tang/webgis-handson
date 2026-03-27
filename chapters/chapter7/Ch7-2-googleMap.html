@@ -1,0 +1,60 @@
+<html>
+<head>
+    <title>Chapter 7: Web-based Mapping Using OpenLayers </title>
+	<script src="https://cdn.jsdelivr.net/npm/ol@v10.2.1/dist/ol.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.2.1/ol.css">
+	
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/src/ol-layerswitcher.css"/>
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/examples/layerswitcher.css" />
+    <script src="https://rawgit.com/walkermatt/ol-layerswitcher/master/dist/ol-layerswitcher.js"></script>	
+</head>
+<body>
+ 	<h3>Chapter 7: Web-based Mapping Using OpenLayers</h3>
+	<h4>Author: YOUR NAME HERE</h4>
+    <div id="map" class="map", style = "width:100%; height: 100%"></div>
+	<script>
+		var latitude=35.306840;
+		var longitude=-80.73200;
+		var latlong=ol.proj.fromLonLat([longitude,latitude]);
+		var zoomLevel=4;
+		
+		var basegroup = new ol.layer.Group({
+			'title': 'Base Maps',
+			layers: []
+		});  //create an empty layer group
+
+		var osm = new ol.layer.Tile({
+			title: 'OpenStreetMap',
+			type: 'base',
+			visible: true,
+			source: new ol.source.OSM()
+		});
+		basegroup.getLayers().push(osm); //add the layer to the layer group
+
+		var googlemap = new ol.layer.Tile({
+			title: 'Google Map',
+			type: 'base',
+			visible: true,
+			source: new ol.source.XYZ({
+				url: `https://mt{0-3}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyB5U-lTv1hoJo_-ON8qVBXtEGXfZI80S7k`
+			})
+		});
+		basegroup.getLayers().push(googlemap);
+		
+		var map = new ol.Map({
+			target: 'map',
+			layers: [basegroup],
+			view: new ol.View({
+				center: latlong,
+				zoom: zoomLevel
+			})
+		});	
+			
+		var layerSwitcher = new ol.control.LayerSwitcher({
+			tipLabel: 'Legend' // Optional label for button
+		});
+		map.addControl(layerSwitcher);
+	</script>
+	
+</body>
+</html>

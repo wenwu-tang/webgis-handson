@@ -1,0 +1,83 @@
+<html>
+<head>
+    <title>Chapter 7: Web-based Mapping Using OpenLayers </title>
+	<script src="https://cdn.jsdelivr.net/npm/ol@v10.2.1/dist/ol.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.2.1/ol.css">
+	
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/src/ol-layerswitcher.css"/>
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/examples/layerswitcher.css" />
+    <script src="https://rawgit.com/walkermatt/ol-layerswitcher/master/dist/ol-layerswitcher.js"></script>	
+</head>
+<body>
+ 	<h3>Chapter 7: Web-based Mapping Using OpenLayers</h3>
+	<h4>Author: YOUR NAME HERE</h4>
+    <div id="map" class="map", style = "width:100%; height: 100%"></div>
+	<script>
+		var latitude=35.306840;
+		var longitude=-80.73200;
+		var latlong=ol.proj.fromLonLat([longitude,latitude]);
+		var zoomLevel=4;
+		
+		var basegroup = new ol.layer.Group({
+			'title': 'Base Maps',
+			layers: []
+		});  //create an empty layer group
+
+		var osm = new ol.layer.Tile({
+			title: 'OpenStreetMap',
+			type: 'base',
+			visible: true,
+			source: new ol.source.OSM()
+		});
+		basegroup.getLayers().push(osm); //add the layer to the layer group
+
+		var googlemap = new ol.layer.Tile({
+			title: 'Google Map',
+			type: 'base',
+			visible: true,
+			source: new ol.source.XYZ({
+				url: `https://mt{0-3}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&key=AIzaSyB5U-lTv1hoJo_-ON8qVBXtEGXfZI80S7k`
+			})
+		});
+		basegroup.getLayers().push(googlemap);
+		
+		var wms1 = new ol.layer.Tile({
+			title: 'Elevation',
+			source: new ol.source.TileWMS({
+				url: 'https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer',
+				params: {'LAYERS': '3DEPElevation:Hillshade Elevation Tinted', 'TILED': true},
+				transition: 0
+			})
+		});
+		var wms2 = new ol.layer.Tile({
+			title: 'Land Cover',
+			source: new ol.source.TileWMS({
+				url: 'https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms',
+				params: {'LAYERS': 'NLCD_2021_Land_Cover_L48', 'TILED': true},
+				transition: 0
+			})
+		});
+		var overlaygroup = new ol.layer.Group({
+			'title': 'Overlay',
+			layers: []
+		});  //create an empty layer group
+		overlaygroup.getLayers().push(wms1);
+		overlaygroup.getLayers().push(wms2);
+		
+		var map = new ol.Map({
+			target: 'map',
+			layers: [basegroup, overlaygroup],
+			view: new ol.View({
+				center: latlong,
+				zoom: zoomLevel
+			})
+		});	
+			
+		var layerSwitcher = new ol.control.LayerSwitcher({
+			tipLabel: 'Legend' // Optional label for button
+		});
+		map.addControl(layerSwitcher);
+	</script>
+	
+</body>
+</html>

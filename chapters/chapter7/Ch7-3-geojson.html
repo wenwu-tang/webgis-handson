@@ -1,0 +1,75 @@
+<html>
+<head>
+    <title>Lab3:Web-based Mapping Using Leaflet </title>
+	 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+	 
+	  <!-- Make sure you put this AFTER Leaflet's CSS -->
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+ 
+</head>
+  
+<body>
+	<h3>Chapter 7: Web-based Mapping Using Leaflet</h3>
+	<h4>Author: YOUR NAME HERE</h4>
+    <div id="map" class="map", style = "width:100%; height: 100%"></div>
+	<script>
+		//based on https://leafletjs.com/examples/quick-start/
+		var latlng=[35.306840,-80.73200];
+		var zoomLevel=3;
+		var map = L.map('map').setView(latlng, zoomLevel);
+		var layerControl = L.control.layers(null, null, { collapsed: false }).addTo(map);
+		
+		var osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+		}).addTo(map);
+		
+		
+		// Define the Google Maps tile layer // from chatgpt
+        var google = L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+        });
+	
+		var elevationWMS = L.tileLayer.wms('https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer', {
+            layers: '3DEPElevation:Hillshade Elevation Tinted',  // The layer you want to display from the WMS (e.g., '0' for first layer)
+            format: 'image/png',
+            transparent: true,
+            attribution: '&copy; ArcGIS WMS'
+        }).addTo(map);
+		
+		//https://www.mrlc.gov/data-services-page
+		var landcoverWMS = L.tileLayer.wms('https://www.mrlc.gov/geoserver/mrlc_display/NLCD_2021_Land_Cover_L48/wms?', {
+            layers: 'NLCD_2021_Land_Cover_L48',  // The layer you want to display from the WMS (e.g., '0' for first layer)
+            format: 'image/png',
+            transparent: true,
+            attribution: '&copy; NLCD WMS'
+        }).addTo(map);
+		
+		// Fetch and add GeoJSON layers from URLs (using Fetch API)
+        fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/refs/heads/master/data/geojson/us-states.json')  // Replace with actual URL
+            .then(response => response.json())
+            .then(data => {
+                geojsonLayer1 = L.geoJSON(data).addTo(map);  // Add the first GeoJSON layer
+                layerControl.addOverlay(geojsonLayer1, "GeoJSON Layer 1 (US States)");  // Add to layer control
+            });
+
+        fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson')  // Replace with actual URL
+            .then(response => response.json())
+            .then(data => {
+                geojsonLayer2 = L.geoJSON(data).addTo(map);  // Add the second GeoJSON layer
+                layerControl.addOverlay(geojsonLayer2, "GeoJSON Layer 2 (Earthquake)");  // Add to layer control
+            });
+				
+		layerControl.addBaseLayer(osm,"OpenStreetMap");
+		layerControl.addBaseLayer(google,"Google Map");
+		
+		layerControl.addOverlay(elevationWMS,"Elevation (WMS)");
+		layerControl.addOverlay(landcoverWMS,"NLCD Land Cover 2021 (WMS)");
+	</script>
+</body>
+</html>

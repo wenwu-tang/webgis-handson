@@ -1,0 +1,43 @@
+<html>
+<head>
+    <title>Chapter 7: Web-based Mapping Using OpenLayers </title>
+	<script src="https://cdn.jsdelivr.net/npm/ol@v10.2.1/dist/ol.js"></script>
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.2.1/ol.css">
+	
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/src/ol-layerswitcher.css"/>
+	<link rel="stylesheet" href="https://rawgit.com/walkermatt/ol-layerswitcher/master/examples/layerswitcher.css" />
+    <script src="https://rawgit.com/walkermatt/ol-layerswitcher/master/dist/ol-layerswitcher.js"></script>	
+</head>
+<body>
+ 	<h3>Chapter 7: Web-based Mapping Using OpenLayers</h3>
+	<h4>Author: YOUR NAME HERE</h4>
+    <div id="map" class="map", style = "width:100%; height: 100%"></div>
+	<script>
+		var latitude=35.306840;
+		var longitude=-80.73200;
+		var latlong=ol.proj.fromLonLat([longitude,latitude]);
+		var zoomLevel=4;
+
+		var osm = new ol.layer.Tile({
+			title: 'OpenStreetMap',
+			type: 'base',
+			visible: true,
+			source: new ol.source.OSM()
+		});
+		var map = new ol.Map({
+			target: 'map',
+			layers: [osm],
+			view: new ol.View({
+				center: latlong,
+				zoom: zoomLevel
+			})
+		});	
+			
+		var layerSwitcher = new ol.control.LayerSwitcher({
+			tipLabel: 'Legend' // Optional label for button
+		});
+		map.addControl(layerSwitcher);
+	</script>
+	
+</body>
+</html>
