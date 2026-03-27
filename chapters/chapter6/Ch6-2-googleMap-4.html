@@ -1,0 +1,47 @@
+<html>
+<head>
+<title>Chapter 6</title>
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+<style type="text/css">
+  html { height: 100% }
+  body { height: 80%; margin: 0px; padding: 40px }
+  #mapContainer { height: 50% }
+</style>
+<script type="text/javascript"
+    src="http://maps.google.com/maps/api/js?sensor=false&key=AIzaSyB5U-lTv1hoJo_-ON8qVBXtEGXfZI80S7k">
+</script>
+<script type="text/javascript">
+  function loadMap() 
+  {
+    var mapCenter = {lat:39.8,lng: -98.5};
+    var mapParameters = {
+      zoom: 3,
+      center: mapCenter,
+      mapTypeId: google.maps.MapTypeId.HYBRID
+    };
+    var map = new google.maps.Map(
+        document.getElementById("mapContainer"),
+        mapParameters
+    );
+	var marker = new google.maps.Marker({
+        position: mapCenter,
+        map: map,
+        title: "Map Center"
+    });
+
+	map.data.loadGeoJson("https://raw.githubusercontent.com/PublicaMundi/MappingAPI/refs/heads/master/data/geojson/us-states.json",);
+	map.data.setStyle({
+		fillColor: 'green',
+		strokeColor: 'yellow'
+	});
+  }
+</script>
+
+</head>
+<body onload="loadMap()">
+<h1> Chapter 6 for Client-side Mapping via APIs </h1>
+<h3>Name: YOUR NAME HERE</h3>
+<!-- Comments-->
+<div id="mapContainer" style="width:100%; height:100%"></div> 
+</body>
+</html>
