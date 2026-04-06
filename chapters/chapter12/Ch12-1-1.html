@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chapter 12: Web-based Spatial Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/ol@v10.3.1/dist/ol.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.1/proj4.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/turf/turf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ol-layerswitcher@4.1.2"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.3.1/ol.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol-layerswitcher@4.1.2/dist/ol-layerswitcher.css">
+
+  <style>
+    html, body {margin: 0; padding: 0; font-family: Arial, sans-serif;}
+    #controls {padding: 12px;}
+    #map {width: 100%;height: 600px;}
+    textarea {width: 95%; margin: 12px;}
+  </style>
+</head>
+
+<body>
+  <h3 style="padding-left:12px;">Chapter 12: Web-based Spatial Analysis</h3>
+  <h4 style="padding-left:12px;">Author: YourNameHere</h4>
+  <div id="controls">
+    <h4>Spatial Analysis on Client Side</h4>
+    <button id="intersectBtn">Intersect Layers on Client Side</button>
+  </div>
+  <div id="map"></div>
+
+  <script>
+    // Register the projected CRS used by GeoServer feature data.
+    proj4.defs('EPSG:26917', '+proj=utm +zone=17 +datum=NAD83 +units=m +no_defs');
+    ol.proj.proj4.register(proj4);
+
+    const osm = new ol.layer.Tile({
+      title: 'OSM',
+      type: 'base',
+      visible: true,
+      source: new ol.source.OSM()
+    });
+
+    const boundaryLayer = new ol.layer.Tile({
+      title: 'Santee Experiment Forest Boundary',
+      visible: true,
+      source: new ol.source.TileWMS({
+        url: 'http://localhost:8080/geoserver/wms',
+        params: {
+          'LAYERS': 'santee:sef_boundary_100ft',
+          'TILED': true
+        },
+        serverType: 'geoserver',
+        transition: 0
+      })
+    });
+
+    // Layer groups for layer switcher organization.
+    const baseGroup = new ol.layer.Group({
+      title: 'Base maps',
+      layers: [osm]
+    });
+
+    const overlayGroup = new ol.layer.Group({
+      title: 'Overlays',
+      layers: [boundaryLayer]
+    });
+
+    // Main OpenLayers map in geographic coordinates.
+    const map = new ol.Map({
+      target: 'map',
+      layers: [baseGroup, overlayGroup],
+      view: new ol.View({
+        projection: 'EPSG:4326',
+        center: [-79.795, 33.152],
+        zoom: 14
+      })
+    });
+
+    const layerSwitcher = new ol.control.LayerSwitcher({
+      activationMode: 'click',
+      startActive: false,
+      tipLabel: 'Layers',
+      groupSelectStyle: 'children'
+    });
+    map.addControl(layerSwitcher);
+
+    // Streams source loaded from WFS as GeoJSON.
+    const vectorSource = new ol.source.Vector({
+      format: new ol.format.GeoJSON(),
+      loader: () => {
+        const url = `http://localhost:8080/geoserver/santee/ows` +
+          `?service=WFS` +
+          `&version=1.1.0` +
+          `&request=GetFeature` +
+          `&typeName=santee:sef_streams` +
+          `&outputFormat=application/json` +
+          `&srsname=EPSG:26917`;
+
+        fetch(url, { method: 'GET', mode: 'cors' })
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(data => {
+            const features = new ol.format.GeoJSON().readFeatures(data, {
+              dataProjection: 'EPSG:26917',
+              featureProjection: 'EPSG:4326'
+            });
+            vectorSource.clear();
+            vectorSource.addFeatures(features);
+          })
+          .catch(error => console.error('Error loading streams:', error));
+      }
+    });
+
+    const streamLayer = new ol.layer.Vector({
+      title: 'Streams',
+      visible: true,
+      source: vectorSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: '#00FF00',
+          width: 2
+        })
+      })
+    });
+    overlayGroup.getLayers().push(streamLayer);
+
+    // Soils source loaded from WFS as GeoJSON.
+    const vectorSource2 = new ol.source.Vector({
+      format: new ol.format.GeoJSON(),
+      loader: () => {
+        const url2 = `http://localhost:8080/geoserver/santee/ows` +
+          `?service=WFS` +
+          `&version=1.1.0` +
+          `&request=GetFeature` +
+          `&typeName=santee:sef_ssurgo_soils` +
+          `&outputFormat=application/json` +
+          `&srsname=EPSG:26917`;
+
+        fetch(url2, { method: 'GET', mode: 'cors' })
+          .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+          })
+          .then(data => {
+            const features = new ol.format.GeoJSON().readFeatures(data, {
+              dataProjection: 'EPSG:26917',
+              featureProjection: 'EPSG:4326'
+            });
+            vectorSource2.clear();
+            vectorSource2.addFeatures(features);
+          })
+          .catch(error => console.error('Error loading soils:', error));
+      }
+    });
+
+    const soilLayer = new ol.layer.Vector({
+      title: 'Soil',
+      visible: true,
+      source: vectorSource2,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: '#ff0000',
+          width: 2
+        }),
+        fill: new ol.style.Fill({
+          color: 'rgba(255, 0, 0, 0.4)'
+        })
+      })
+    });
+    overlayGroup.getLayers().push(soilLayer);
+
+    // Client-side Turf intersection output layer/source.
+    const intersectionSource = new ol.source.Vector();
+    const intersectionLayer = new ol.layer.Vector({
+      title: 'Intersected Results 1',
+      visible: true,
+      source: intersectionSource,
+      style: new ol.style.Style({
+        stroke: new ol.style.Stroke({
+          color: '#34dbeb',
+          width: 4
+        }),
+        fill: new ol.style.Fill({
+          color: 'rgba(255, 255, 0, 0.4)'
+        })
+      })
+    });
+    overlayGroup.getLayers().push(intersectionLayer);
+
+    // Intersect stream/soil features on the client side.
+    function runClientSideIntersection() {
+      const features1 = vectorSource2.getFeatures();
+      const features2 = vectorSource.getFeatures();
+
+      if (features1.length > 0 && features2.length > 0) {
+        intersectionSource.clear();
+
+        const geojson1 = new ol.format.GeoJSON().writeFeaturesObject(features1);
+        const geojson2 = new ol.format.GeoJSON().writeFeaturesObject(features2);
+
+        geojson1.features.forEach((feature1) => {
+          geojson2.features.forEach((feature2) => {
+            try {
+              const intersection = turf.intersect(feature1, feature2);
+              if (intersection) {
+                const intersectFeature = new ol.format.GeoJSON().readFeature(intersection);
+                intersectionSource.addFeature(intersectFeature);
+              }
+            } catch (e) {
+              console.warn('Client-side intersection failed for a feature pair:', e);
+            }
+          });
+        });
+      } else {
+        alert('One or both layers have no features loaded.');
+      }
+    }
+
+    document.getElementById('intersectBtn').addEventListener('click', runClientSideIntersection);
+
+  </script>
+</body>
+</html>
